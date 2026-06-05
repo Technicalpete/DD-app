@@ -541,7 +541,7 @@ section { padding-bottom: 4px; }
         <strong>Ta bilde med kamera</strong>
         <p>Velg fra galleri eller kamera – embeddes i rapporten</p>
       </div>
-      <input type="file" id="camInput" accept="image/*" capture="environment" multiple onchange="handlePhotos(event)">
+      <input type="file" id="camInput" accept="image/*" multiple onchange="handlePhotos(event)">
       <div class="photo-grid" id="photoGrid"></div>
     </div>
 
@@ -558,7 +558,7 @@ section { padding-bottom: 4px; }
 /* docx 838KB – innebygd, fungerer offline */
 (function(global2, factory) {
   typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global2 = typeof globalThis !== "undefined" ? globalThis : global2 || self, factory(global2.docx = {}));
-})(this, (function(exports2) {
+})(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : self, (function(exports2) {
   "use strict";var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
 var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
@@ -23633,9 +23633,9 @@ var __async = (__this, __arguments, generator) => {
   Object.defineProperty(exports2, Symbol.toStringTag, { value: "Module" });
 }));
 
-function loadDocx() { return Promise.resolve(); }
 </script>
 <script>
+function loadDocx() { return Promise.resolve(); }
 // ═══ SERVICE WORKER ═══════════════════════════════════════
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
@@ -23670,10 +23670,15 @@ let db = null;
 
 function openDB() {
   return new Promise((res, rej) => {
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
-    req.onsuccess = e => { db = e.target.result; res(db); };
-    req.onerror = e => rej(e);
+    try {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
+      req.onsuccess = e => { db = e.target.result; res(db); };
+      req.onerror = e => { console.warn('IndexedDB open error:', e); rej(e); };
+    } catch(e) {
+      console.warn('IndexedDB not available:', e);
+      rej(e);
+    }
   });
 }
 
@@ -23744,7 +23749,12 @@ function getSug(kat, tg) { return (SUGG[kat] || SUGG.a)[tg] || null; }
 
 // ═══ INIT ═════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  await openDB();
+  try { await openDB(); } catch(e) {
+    // IndexedDB unavailable (private browsing, iOS restrictions)
+    // App still works but data won't persist
+    console.warn('Storage unavailable – data will not persist:', e);
+    toast('⚠️ Lagring ikke tilgjengelig i privat modus');
+  }
   await loadState();
   renderAll();
   updateProgress();
@@ -24428,11 +24438,12 @@ async function genRapport() {
 
 // ═══ PERSISTENCE (IndexedDB) ══════════════════════════════
 let saveTimer = null;
-function saveState() { clearTimeout(saveTimer); saveTimer = setTimeout(persistState, 600); }
-async function persistState() { try { await dbPut('state', JSON.stringify(state)); } catch(e) { console.warn('Save failed:', e); } }
+function saveState() { clearTimeout(saveTimer); saveTimer = setTimeout(persistState, 300); }
+async function persistState() { if (!db) return; try { await dbPut('state', JSON.stringify(state)); } catch(e) { console.warn('Save failed:', e); } }
 async function saveNow() { await persistState(); toast('💾 Lagret','ok'); }
 
 async function loadState() {
+  if (!db) return; // IndexedDB not available
   try {
     const raw = await dbGet('state');
     if (raw) { state = JSON.parse(raw); fillFields(); renderPartsList(); }
