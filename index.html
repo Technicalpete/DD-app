@@ -554,7 +554,20 @@ section { padding-bottom: 4px; }
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+<script>
+// Last docx dynamisk – garanterer at biblioteket er klart før bruk
+function loadDocx() {
+  return new Promise((resolve, reject) => {
+    if (typeof docx !== 'undefined') { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Kunne ikke laste docx. Sjekk internettforbindelsen og prøv igjen.'));
+    document.head.appendChild(s);
+  });
+}
+loadDocx().catch(() => {}); // forhånds-laste ved sidestart
+</script>
 <script>
 // ═══ SERVICE WORKER ═══════════════════════════════════════
 if ('serviceWorker' in navigator) {
@@ -1116,6 +1129,8 @@ async function genRapport() {
   const btn=document.getElementById('expBtn'), spin=document.getElementById('expSpinner');
   btn.style.opacity='.7'; spin.style.display='block';
   try {
+    // Sikre at docx-biblioteket er lastet (viktig offline/første gang)
+    await loadDocx();
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
             Header, Footer, AlignmentType, HeadingLevel, BorderStyle, WidthType,
             ShadingType, VerticalAlign, PageNumberElement, LevelFormat,
