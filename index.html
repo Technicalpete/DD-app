@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- CBRE Tilstandsvurdering v2 – docx bundled inline -->
 <html lang="no">
 <head>
 <meta charset="UTF-8">
@@ -23635,10 +23636,22 @@ var __async = (__this, __arguments, generator) => {
 
 </script>
 <script>
-function loadDocx() { return Promise.resolve(); }
+function loadDocx() {
+  if (typeof docx !== 'undefined' && docx.Document) return Promise.resolve();
+  // docx bundle failed to execute - give a clear error
+  return Promise.reject(new Error(
+    'docx-biblioteket er ikke tilgjengelig. Last inn siden på nytt (Ctrl+R / Cmd+R).'
+  ));
+}
 // ═══ SERVICE WORKER ═══════════════════════════════════════
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    // Unregister old service workers to force cache refresh
+    regs.forEach(reg => reg.update());
+  });
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    reg.update(); // Force check for new SW version
+  }).catch(e => console.warn('SW:', e));
 }
 
 // ═══ OFFLINE DETECTION ════════════════════════════════════

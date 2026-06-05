@@ -1,8 +1,7 @@
-const CACHE_NAME = 'cbre-tv-v1';
+const CACHE_NAME = 'cbre-tv-v2';
 const ASSETS = [
   './index.html',
-  './manifest.json',
-  'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js'
+  './manifest.json'
 ];
 
 self.addEventListener('install', e => {
