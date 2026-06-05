@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#003F2D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CBRE TV">
+<link rel="manifest" href="manifest.json">
+<title>CBRE Tilstandsvurdering</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --green:       #003F2D;
+  --green-mid:   #005C42;
+  --green-light: #17E88F;
+  --green-pale:  #E8F5F0;
+  --amber:       #FFC107;
+  --red:         #D32F2F;
+  --gray-900:    #111;
+  --gray-700:    #333;
+  --gray-500:    #666;
+  --gray-300:    #C4C4C4;
+  --gray-100:    #F4F4F4;
+  --white:       #fff;
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bot:    env(safe-area-inset-bottom, 0px);
+  --radius:      14px;
+  --font:        'DM Sans', sans-serif;
+  --mono:        'DM Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; overflow: hidden; }
+body { font-family: var(--font); background: var(--gray-100); color: var(--gray-900); height: 100%; display: flex; flex-direction: column; overscroll-behavior: none; }
+
+/* ── HEADER ── */
+.header {
+  background: var(--green);
+  padding: calc(var(--safe-top) + 12px) 16px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+.header-logo { display: flex; align-items: center; gap: 10px; }
+.badge { background: var(--green-light); color: var(--green); font-weight: 700; font-size: 12px; letter-spacing: .05em; padding: 3px 8px; border-radius: 4px; }
+.header-title { color: rgba(255,255,255,.85); font-size: 14px; font-weight: 500; }
+.header-actions { display: flex; gap: 6px; }
+.icon-btn {
+  background: rgba(255,255,255,.12); border: none; border-radius: 8px;
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 17px; cursor: pointer; transition: background .15s;
+}
+.icon-btn:active { background: rgba(255,255,255,.25); }
+
+/* ── OFFLINE BANNER ── */
+.offline-banner {
+  background: #B71C1C; color: white; text-align: center;
+  font-size: 12px; font-weight: 600; padding: 5px;
+  display: none; letter-spacing: .04em;
+}
+.offline-banner.show { display: block; }
+
+/* ── TAB BAR ── */
+.tabs { display: flex; background: var(--green); border-top: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
+.tab {
+  flex: 1; padding: 8px 4px 10px; border: none; background: none;
+  color: rgba(255,255,255,.45); font-family: var(--font); font-size: 11px; font-weight: 600;
+  cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s;
+  letter-spacing: .03em; text-transform: uppercase;
+}
+.tab.active { color: var(--green-light); border-bottom-color: var(--green-light); }
+.tab-pip {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--green-light); color: var(--green);
+  font-size: 9px; font-weight: 800; min-width: 14px; height: 14px;
+  border-radius: 7px; margin-left: 4px; padding: 0 3px;
+}
+
+/* ── SCREENS ── */
+.screens { flex: 1; overflow: hidden; position: relative; }
+.screen { position: absolute; inset: 0; overflow-y: auto; padding: 14px 14px calc(var(--safe-bot) + 14px); display: none; -webkit-overflow-scrolling: touch; }
+.screen.active { display: block; }
+
+/* ── CARDS ── */
+.card { background: var(--white); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; box-shadow: 0 1px 8px rgba(0,0,0,.07); }
+.card-head { padding: 12px 14px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; }
+.card-label { font-size: 11px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: .06em; }
+.card-body { padding: 14px; }
+
+/* ── FORM ── */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+label { display: block; font-size: 11px; font-weight: 700; color: var(--gray-500); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 5px; }
+input, select, textarea {
+  width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-300);
+  border-radius: 9px; font-family: var(--font); font-size: 15px;
+  color: var(--gray-900); background: var(--white); appearance: none; -webkit-appearance: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,63,45,.08); }
+textarea { min-height: 72px; resize: none; line-height: 1.5; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.req { color: var(--red); }
+
+/* ── GRADE PICKER ── */
+.grade-row { display: flex; gap: 5px; }
+.grade-btn {
+  flex: 1; padding: 9px 2px; border: 1.5px solid var(--gray-300); border-radius: 9px;
+  background: var(--white); font-family: var(--font); font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all .15s; text-align: center; color: var(--gray-500);
+}
+.grade-btn span { display: block; font-size: 9px; font-weight: 500; opacity: .7; margin-top: 2px; }
+.grade-btn.on { color: white; border-color: transparent; }
+.grade-btn[data-v="TG 0"].on  { background: var(--green); }
+.grade-btn[data-v="TG 1"].on  { background: #4CAF50; }
+.grade-btn[data-v="TG 2"].on  { background: var(--amber); color: var(--gray-900); }
+.grade-btn[data-v="TG 3"].on  { background: var(--red); }
+.grade-btn[data-v="IU"].on    { background: #9E9E9E; }
+.grade-btn[data-v="KG 0"].on  { background: var(--green); }
+.grade-btn[data-v="KG 1"].on  { background: #4CAF50; }
+.grade-btn[data-v="KG 2"].on  { background: var(--amber); color: var(--gray-900); }
+.grade-btn[data-v="KG 3"].on  { background: var(--red); }
+.grade-hint { font-size: 11px; margin-top: 5px; padding: 5px 8px; border-radius: 6px; display: none; }
+.grade-hint.show { display: block; }
+.gh-0 { background: var(--green-pale); color: var(--green); }
+.gh-1 { background: #E8F5E9; color: #2E7D32; }
+.gh-2 { background: #FFF8E1; color: #F57F17; }
+.gh-3 { background: #FFEBEE; color: var(--red); }
+.gh-iu { background: var(--gray-100); color: var(--gray-500); }
+
+/* ── SUGGESTION BOX ── */
+.sug-box { background: #FFF8E1; border-left: 3px solid var(--amber); border-radius: 0 8px 8px 0; padding: 10px 12px; margin-top: 8px; display: none; }
+.sug-box.show { display: block; }
+.sug-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #E65100; margin-bottom: 6px; }
+.sug-item { font-size: 12px; color: #4E342E; margin-bottom: 3px; padding-left: 12px; position: relative; }
+.sug-item::before { content: '→'; position: absolute; left: 0; color: #FF8F00; }
+.sug-apply { background: var(--green); color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); margin-top: 8px; }
+
+/* ── CAMERA ── */
+.cam-zone {
+  border: 2px dashed var(--gray-300); border-radius: var(--radius);
+  padding: 18px 14px; text-align: center; cursor: pointer; background: var(--gray-100);
+  transition: all .15s;
+}
+.cam-zone:active { border-color: var(--green); background: var(--green-pale); }
+.cam-icon { font-size: 28px; margin-bottom: 6px; }
+.cam-zone strong { display: block; font-size: 13px; color: var(--green); margin-bottom: 3px; }
+.cam-zone p { font-size: 11px; color: var(--gray-500); }
+input[type="file"] { display: none; }
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
+.photo-wrap { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--gray-300); }
+.photo-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.photo-caption-input { width: 100%; margin-top: 4px; padding: 4px 6px; border: 1px solid var(--gray-300); border-radius: 5px; font-size: 11px; font-family: var(--font); }
+
+/* ── PART LIST ── */
+.part-item { background: var(--white); border-radius: var(--radius); margin-bottom: 9px; box-shadow: 0 1px 8px rgba(0,0,0,.07); overflow: hidden; }
+.part-head { padding: 11px 13px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.part-code { font-family: var(--mono); font-size: 11px; color: var(--gray-500); min-width: 28px; }
+.part-info { flex: 1; min-width: 0; }
+.part-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.part-obs { font-size: 11px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.part-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.tg-badge { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; color: white; }
+.tg-0 { background: var(--green); } .tg-1 { background: #4CAF50; }
+.tg-2 { background: var(--amber); color: #333; } .tg-3 { background: var(--red); }
+.tg-iu { background: #9E9E9E; } .tg-empty { background: var(--gray-300); color: var(--gray-500); }
+.photo-count { font-size: 10px; color: var(--gray-500); }
+.chevron { color: var(--gray-300); font-size: 14px; transition: transform .2s; flex-shrink: 0; }
+.part-item.open .chevron { transform: rotate(180deg); }
+.part-expand { display: none; padding: 0 13px 12px; border-top: 1px solid var(--gray-100); }
+.part-item.open .part-expand { display: block; }
+.part-item.open .part-head { border-bottom: 1px solid var(--gray-100); }
+
+/* ── BREEAM SCORE ── */
+.score-card { background: var(--green); border-radius: var(--radius); padding: 18px; text-align: center; margin-bottom: 12px; }
+.score-num { font-size: 52px; font-weight: 300; color: white; line-height: 1; }
+.score-denom { font-size: 18px; color: rgba(255,255,255,.5); }
+.score-label { font-size: 11px; color: rgba(255,255,255,.65); text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; }
+
+/* ── PROGRESS BAR ── */
+.prog-wrap { padding: 0 16px 8px; background: var(--green); }
+.prog-bar { height: 2px; background: rgba(255,255,255,.15); border-radius: 1px; }
+.prog-fill { height: 100%; background: var(--green-light); border-radius: 1px; transition: width .5s; }
+.prog-label { font-size: 10px; color: rgba(255,255,255,.4); text-align: right; padding-top: 3px; letter-spacing: .04em; }
+
+/* ── BUTTONS ── */
+.btn { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 16px; border-radius: 10px; border: none; font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; width: 100%; }
+.btn:active { transform: scale(.98); }
+.btn-green { background: var(--green); color: white; }
+.btn-green:active { background: var(--green-mid); }
+.btn-ghost { background: var(--gray-100); color: var(--gray-900); border: 1.5px solid var(--gray-300); }
+.btn-danger { background: #FFEBEE; color: var(--red); border: 1.5px solid #FFCDD2; }
+.btn-sm { padding: 8px 12px; font-size: 12px; width: auto; border-radius: 7px; }
+.btn-row { display: flex; gap: 8px; }
+.spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── MODAL ── */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: none; align-items: flex-end; }
+.modal-bg.open { display: flex; }
+.modal { background: var(--white); border-radius: 20px 20px 0 0; width: 100%; max-height: 92vh; overflow-y: auto; padding: 16px 14px calc(var(--safe-bot) + 20px); animation: slideUp .28s ease; -webkit-overflow-scrolling: touch; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle { width: 36px; height: 4px; background: var(--gray-300); border-radius: 2px; margin: 0 auto 14px; }
+.modal-title { font-size: 16px; font-weight: 700; color: var(--green); margin-bottom: 2px; }
+.modal-sub { font-size: 12px; color: var(--gray-500); margin-bottom: 16px; }
+
+/* ── INFO BOX ── */
+.info-box { background: var(--green-pale); border-left: 3px solid var(--green-light); border-radius: 0 8px 8px 0; padding: 10px 12px; margin-bottom: 12px; font-size: 12px; color: var(--green-mid); line-height: 1.5; }
+.info-box strong { display: block; margin-bottom: 2px; color: var(--green); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+
+/* ── TG DIST ── */
+.tg-dist-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.tg-dist-label { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; min-width: 42px; text-align: center; }
+.tg-dist-bar-wrap { flex: 1; height: 7px; background: var(--gray-100); border-radius: 3px; overflow: hidden; }
+.tg-dist-bar { height: 100%; border-radius: 3px; transition: width .5s; }
+.tg-dist-count { font-size: 12px; font-weight: 600; color: var(--gray-500); min-width: 16px; text-align: right; }
+
+/* ── WARNING CARD ── */
+.warn-card { background: #FFF8E1; border: 1.5px solid #FFE082; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; }
+.warn-title { font-size: 12px; font-weight: 700; color: #E65100; margin-bottom: 5px; }
+.warn-item { font-size: 11px; color: #BF360C; margin-bottom: 3px; padding-left: 12px; position: relative; }
+.warn-item::before { content: '⚠'; position: absolute; left: 0; font-size: 10px; }
+
+/* ── TOAST ── */
+.toast { position: fixed; bottom: calc(var(--safe-bot) + 72px); left: 50%; transform: translateX(-50%) translateY(10px); background: var(--gray-900); color: white; padding: 9px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.ok { background: var(--green); }
+
+/* ── EMPTY ── */
+.empty { text-align: center; padding: 40px 20px; color: var(--gray-500); }
+.empty-icon { font-size: 38px; margin-bottom: 10px; }
+.empty p { font-size: 13px; line-height: 1.6; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav { display: flex; background: white; border-top: 1px solid var(--gray-100); padding-bottom: var(--safe-bot); flex-shrink: 0; z-index: 10; }
+.nav-btn { flex: 1; padding: 8px 2px 6px; border: none; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; color: var(--gray-300); transition: color .15s; }
+.nav-btn.active { color: var(--green); }
+.nav-icon { font-size: 21px; }
+.nav-lbl { font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+
+/* ── SECTION LABEL ── */
+.section-lbl { font-size: 10px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: .08em; padding: 14px 0 6px; display: block; }
+
+/* ── INSTALL BANNER ── */
+.install-banner { background: var(--green-pale); border: 1.5px solid var(--green-light); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; display: none; }
+.install-banner.show { display: flex; align-items: center; gap: 10px; }
+.install-banner p { flex: 1; font-size: 12px; color: var(--green-mid); }
+.install-banner button { background: var(--green); color: white; border: none; border-radius: 7px; padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); flex-shrink: 0; }
+
+/* ── Q-OPTIONS (BREEAM) ── */
+.q-opts { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.q-opt { border: 1.5px solid var(--gray-300); border-radius: 9px; padding: 9px 11px; cursor: pointer; display: flex; gap: 9px; align-items: flex-start; transition: all .15s; }
+.q-opt.sel { border-color: var(--green); background: var(--green-pale); }
+.q-score { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--green); min-width: 24px; padding-top: 1px; }
+.q-text { font-size: 12px; color: var(--gray-900); line-height: 1.4; }
+.q-sub { font-size: 10px; color: var(--gray-500); margin-top: 2px; }
+
+/* ── EXPORT ── */
+.export-btn { background: var(--green); color: white; border: none; border-radius: var(--radius); padding: 16px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px rgba(0,63,45,.25); transition: all .15s; }
+.export-btn:active { background: var(--green-mid); transform: scale(.98); }
+
+section { padding-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">
+    <span class="badge">CBRE</span>
+    <span class="header-title">Tilstandsvurdering</span>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="saveNow()" title="Lagre">💾</button>
+    <button class="icon-btn" onclick="confirmClear()" title="Ny">🗑</button>
+  </div>
+</div>
+<div class="offline-banner" id="offlineBanner">📵 OFFLINE – data lagres lokalt</div>
+<div class="prog-wrap">
+  <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  <div class="prog-label" id="progLabel">Fyll inn eiendomsinfo</div>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="goTab(0)" id="tab0">🏢 Eiendom</button>
+  <button class="tab" onclick="goTab(1)" id="tab1">🔍 Befaring</button>
+  <button class="tab" onclick="goTab(2)" id="tab2">📋 Tiltak</button>
+  <button class="tab" onclick="goTab(3)" id="tab3">📄 Rapport</button>
+</div>
+
+<div class="screens">
+
+<!-- ══════ TAB 0: EIENDOM ══════ -->
+<div class="screen active" id="scr0">
+  <div class="install-banner" id="installBanner">
+    <p>📲 Installer som app for offline bruk</p>
+    <button onclick="installPWA()">Installer</button>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-label">📍 Eiendom</span></div>
+    <div class="card-body">
+      <div class="field"><label>Navn <span class="req">*</span></label><input id="e_navn" placeholder="f.eks. Storgata 12" oninput="autosave()"></div>
+      <div class="field"><label>Adresse <span class="req">*</span></label><input id="e_adresse" placeholder="Gateadresse" oninput="autosave()"></div>
+      <div class="row2">
+        <div class="field"><label>Postnr / sted</label><input id="e_kommune" placeholder="0182 Oslo" oninput="autosave()"></div>
+        <div class="field"><label>Byggeår</label><input id="e_aar" type="number" placeholder="1975" oninput="autosave()"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>BRA (m²)</label><input id="e_bra" type="number" placeholder="4820" oninput="autosave()"></div>
+        <div class="field"><label>Etasjer</label><input id="e_etasjer" placeholder="5 + kjeller" oninput="autosave()"></div>
+      </div>
+      <div class="field"><label>Bygningstype</label>
+        <select id="e_type" onchange="autosave()">
+          <option value="">Velg...</option>
+          <option>Kontorbygg</option><option>Logistikk / lager</option>
+          <option>Handels- / kjøpesenter</option><option>Hotell</option>
+          <option>Undervisningsbygg</option><option>Sykehus / helse</option>
+          <option>Industri</option><option>Annet</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-label">👤 Oppdrag</span></div>
+    <div class="card-body">
+      <div class="field"><label>Oppdragsgiver <span class="req">*</span></label><input id="o_giver" placeholder="Eier / investor" oninput="autosave()"></div>
+      <div class="field"><label>Forvalter</label><input id="o_forvalter" placeholder="FM-selskap" oninput="autosave()"></div>
+      <div class="row2">
+        <div class="field"><label>Rapportnr.</label><input id="o_rnr" placeholder="CBRE-TV-2025-001" oninput="autosave()"></div>
+        <div class="field"><label>Befaringsdato <span class="req">*</span></label><input id="o_dato" type="date" oninput="autosave()"></div>
+      </div>
+      <div class="field"><label>Utarbeidet av <span class="req">*</span></label><input id="o_av" placeholder="Navn, CBRE AS" oninput="autosave()"></div>
+      <div class="field"><label>Stilling</label><input id="o_stilling" placeholder="Senior Rådgiver, ESG" oninput="autosave()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-label">✍️ Sammendrag</span></div>
+    <div class="card-body">
+      <div class="field"><label>Innledning</label><textarea id="s_inn" placeholder="Formål, metode, hvem som deltok..." oninput="autosave()"></textarea></div>
+      <div class="field"><label>Konklusjon</label><textarea id="s_konkl" placeholder="Viktigste funn og estimert totalkostnad..." oninput="autosave()"></textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-label">🏆 BREEAM-NOR Rsc 01</span></div>
+    <div class="card-body">
+      <div class="info-box"><strong>Rsc 01 – maks 7 poeng</strong>Q1 (maks 3p): hvem utarbeidet rapporten. Q2 (maks 4p): er mangler utbedret. CBRE AS som uavhengig tredjepart gir maksimalt Q1-poeng.</div>
+      <div class="field"><label>Q1 – Utarbeidet av</label>
+        <div class="q-opts" id="q1opts">
+          <div class="q-opt sel" data-v="3" onclick="setQ('q1',3,this)"><span class="q-score">3p</span><div><div class="q-text">Uavhengig tredjepart (CBRE AS), iht. NS 3424:2012 ✓</div><div class="q-sub">Gir maks Q1-poeng</div></div></div>
+          <div class="q-opt" data-v="2" onclick="setQ('q1',2,this)"><span class="q-score">2p</span><div class="q-text">Forvalter, iht. NS 3424:2012</div></div>
+          <div class="q-opt" data-v="1" onclick="setQ('q1',1,this)"><span class="q-score">1p</span><div class="q-text">Forvalter, ikke iht. NS 3424</div></div>
+          <div class="q-opt" data-v="0" onclick="setQ('q1',0,this)"><span class="q-score">0p</span><div class="q-text">Ingen tilstandsvurdering</div></div>
+        </div>
+      </div>
+      <div class="field"><label>Q2 – Mangler utbedret</label>
+        <div class="q-opts" id="q2opts">
+          <div class="q-opt" data-v="4" onclick="setQ('q2',4,this)"><span class="q-score">4p</span><div class="q-text">Alle større og mindre mangler utbedret</div></div>
+          <div class="q-opt" data-v="3" onclick="setQ('q2',3,this)"><span class="q-score">3p</span><div class="q-text">Alle større utbedret + handlingsplan for resterende</div></div>
+          <div class="q-opt sel" data-v="2" onclick="setQ('q2',2,this)"><span class="q-score">2p</span><div><div class="q-text">Alle større mangler (TG 2+3) utbedret ✓</div><div class="q-sub">TG 2 og TG 3 = større mangler iht. NS 3424</div></div></div>
+          <div class="q-opt" data-v="1" onclick="setQ('q2',1,this)"><span class="q-score">1p</span><div class="q-text">Handlingsplan foreligger, ingen utbedringer ennå</div></div>
+          <div class="q-opt" data-v="0" onclick="setQ('q2',0,this)"><span class="q-score">0p</span><div class="q-text">Ingen utbedring, ingen handlingsplan</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-green" onclick="goTab(1)">Gå til befaring →</button>
+</div>
+
+<!-- ══════ TAB 1: BEFARING ══════ -->
+<div class="screen" id="scr1">
+  <div class="info-box"><strong>Krit. 2 a–f</strong>BREEAM Rsc 01 krever at alle 6 kategorier er dekket. Trykk «Mal» for å laste inn alle NS 3424-bygningsdeler. Fyll inn TG, KG og ta bilder underveis på befaringen.</div>
+
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn btn-green" onclick="openAddPart()" style="flex:1">＋ Legg til</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadTemplate()" style="width:auto;flex-shrink:0">📋 Mal</button>
+  </div>
+
+  <!-- TG legend collapsible -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-body" style="padding:10px 12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleLegend()">
+        <span style="font-size:12px;font-weight:600;color:var(--green)">📖 Forstå TG og KG</span>
+        <span id="legendChev" style="font-size:14px;color:var(--gray-300);transition:transform .2s">⌄</span>
+      </div>
+      <div id="legendBody" style="display:none;margin-top:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Tilstandsgrader (TG)</div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
+          <div style="display:flex;gap:8px;align-items:center"><span class="tg-badge tg-0">TG 0</span><span style="font-size:11px">Ingen avvik – tilfredsstillende</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="tg-badge tg-1">TG 1</span><span style="font-size:11px">Svake symptomer – mindre mangel</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="tg-badge tg-2">TG 2</span><span style="font-size:11px;color:var(--gray-900)">Middels symptomer – <strong>større mangel</strong> ⚠</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="tg-badge tg-3">TG 3</span><span style="font-size:11px">Kraftige symptomer – <strong>strakstiltak</strong> ⛔</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="tg-badge tg-iu">IU</span><span style="font-size:11px">Ikke undersøkt</span></div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-500)">TG 2 og TG 3 er «større mangler» i BREEAM Rsc 01 – disse må utbedres for Q2-poeng.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="partsList"></div>
+</div>
+
+<!-- ══════ TAB 2: TILTAK ══════ -->
+<div class="screen" id="scr2">
+  <div class="info-box"><strong>Rsc 01 krit. 4</strong>Handlingsplanen genereres automatisk fra bygningsdeler med TG 1–3. Fyll inn frist og ansvarlig – dette er påkrevd for BREEAM-compliance.</div>
+  <div id="actionList"></div>
+  <span class="section-lbl">Allerede utbedrede mangler (krit. 5)</span>
+  <div class="info-box"><strong>Krit. 5 – Dokumenter utbedringer</strong>Mangler som er utbedret siden forrige rapport gir Q2-poeng. Legg til med dokumentasjonsreferanse (faktura, servicerapport o.l.).</div>
+  <button class="btn btn-ghost" onclick="addUtbedret()" style="margin-bottom:12px">＋ Legg til utbedret mangel</button>
+  <div id="utbedretList"></div>
+</div>
+
+<!-- ══════ TAB 3: RAPPORT ══════ -->
+<div class="screen" id="scr3">
+  <div class="score-card" id="scoreCard">
+    <div class="score-label">BREEAM-NOR Rsc 01</div>
+    <div><span class="score-num" id="scoreNum">5</span><span class="score-denom"> / 7</span></div>
+    <div class="score-label" id="scoreLbl" style="margin-top:6px"></div>
+  </div>
+
+  <div id="warnCard" style="display:none"></div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-label">📊 Oppsummering</span></div>
+    <div class="card-body" id="summaryBody"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-label">🎯 Tilstandsfordeling</span></div>
+    <div class="card-body" id="tgDist"></div>
+  </div>
+
+  <div style="margin-top:16px">
+    <button class="export-btn" onclick="genRapport()" id="expBtn">
+      <span style="font-size:20px">📥</span>
+      <span>Last ned Word-rapport (.docx)</span>
+      <div class="spinner" id="expSpinner"></div>
+    </button>
+    <p style="font-size:10px;color:var(--gray-500);text-align:center;margin-top:6px">Genereres lokalt – fungerer offline</p>
+  </div>
+</div>
+
+</div><!-- /screens -->
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="goTab(0)" id="nav0"><span class="nav-icon">🏢</span><span class="nav-lbl">Eiendom</span></button>
+  <button class="nav-btn" onclick="goTab(1)" id="nav1"><span class="nav-icon">🔍</span><span class="nav-lbl">Befaring</span></button>
+  <button class="nav-btn" onclick="goTab(2)" id="nav2"><span class="nav-icon">📋</span><span class="nav-lbl">Tiltak</span></button>
+  <button class="nav-btn" onclick="goTab(3)" id="nav3"><span class="nav-icon">📄</span><span class="nav-lbl">Rapport</span></button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════ MODAL: BYGNINGSDEL ══════ -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">Ny bygningsdel</div>
+    <div class="modal-sub" id="modalSub">Fyll inn tilstand og observasjoner</div>
+
+    <div class="field"><label>Kategori <span class="req">*</span></label>
+      <select id="m_kat" onchange="onKatChange()">
+        <option value="a">a) Bygningsteknisk tilstand</option>
+        <option value="b">b) VVS-tekniske installasjoner</option>
+        <option value="c">c) Elektrotekniske installasjoner</option>
+        <option value="d">d) Brannteknisk tilstand</option>
+        <option value="e">e) Andre tekniske installasjoner</option>
+        <option value="f">f) Helse- og miljøforhold</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="field"><label>NS-kode</label><input id="m_kode" placeholder="32"></div>
+      <div class="field"><label>Navn <span class="req">*</span></label><input id="m_navn" placeholder="Yttervegger"></div>
+    </div>
+
+    <div class="field">
+      <label>Tilstandsgrad (TG) <span class="req">*</span></label>
+      <div class="grade-row">
+        <button class="grade-btn" data-v="TG 0" onclick="pickGrade('m_tg',this)">TG 0<span>Ingen</span></button>
+        <button class="grade-btn" data-v="TG 1" onclick="pickGrade('m_tg',this)">TG 1<span>Svak</span></button>
+        <button class="grade-btn" data-v="TG 2" onclick="pickGrade('m_tg',this)">TG 2<span>Middels</span></button>
+        <button class="grade-btn" data-v="TG 3" onclick="pickGrade('m_tg',this)">TG 3<span>Kraftig</span></button>
+        <button class="grade-btn" data-v="IU" onclick="pickGrade('m_tg',this)">IU<span>Ikke u.</span></button>
+      </div>
+      <input type="hidden" id="m_tg">
+      <div class="grade-hint" id="tg_hint"></div>
+    </div>
+
+    <div class="field">
+      <label>Konsekvensgrad (KG)</label>
+      <div class="grade-row">
+        <button class="grade-btn" data-v="KG 0" onclick="pickGrade('m_kg',this)">KG 0<span>Ingen</span></button>
+        <button class="grade-btn" data-v="KG 1" onclick="pickGrade('m_kg',this)">KG 1<span>Liten</span></button>
+        <button class="grade-btn" data-v="KG 2" onclick="pickGrade('m_kg',this)">KG 2<span>Middels</span></button>
+        <button class="grade-btn" data-v="KG 3" onclick="pickGrade('m_kg',this)">KG 3<span>Stor</span></button>
+      </div>
+      <input type="hidden" id="m_kg">
+    </div>
+
+    <!-- Suggestion box -->
+    <div class="sug-box" id="sugBox">
+      <div class="sug-title">💡 Standardtekster</div>
+      <div id="sugContent"></div>
+      <button class="sug-apply" onclick="applySug()">Bruk som utgangspunkt</button>
+    </div>
+
+    <div class="row2">
+      <div class="field"><label>Prioritet</label>
+        <select id="m_prio">
+          <option>Umiddelbart</option><option>1–2 år</option>
+          <option selected>2–4 år</option><option>4–6 år</option><option>Løpende</option>
+        </select>
+      </div>
+      <div class="field"><label>Rekkefølge</label><input id="m_rek" type="number" placeholder="1–5" min="1" max="10"></div>
+    </div>
+
+    <div class="field"><label>Beskrivelse</label><textarea id="m_besk" placeholder="Alder, materiale, sist rehabilitert..."></textarea>
+      <div style="font-size:10px;color:var(--gray-500);margin-top:4px">Konstruksjonstype, alder, vedlikeholdshistorikk.</div></div>
+    <div class="field"><label>Observasjoner <span class="req">*</span></label><textarea id="m_obs" placeholder="Hva ble observert? Konkret, stedsspesifikt."></textarea>
+      <div style="font-size:10px;color:var(--gray-500);margin-top:4px">Grunnlaget for TG-vurderingen. Vær konkret.</div></div>
+    <div class="field"><label>Anbefalte tiltak</label><textarea id="m_tilt" placeholder="Strakstiltak / langsiktig tiltak..."></textarea></div>
+    <div class="field"><label>Framtidig vedlikehold (krit. 6)</label><textarea id="m_ved" placeholder="Service, inspeksjon, utskiftningstidspunkt..."></textarea>
+      <div style="font-size:10px;color:var(--gray-500);margin-top:4px">BREEAM krit. 6 krever anbefalinger om løpende vedlikehold.</div></div>
+    <div class="row2">
+      <div class="field"><label>Kostnad (eks. mva.)</label><input id="m_kost" placeholder="800 000–1 200 000 kr"></div>
+      <div class="field"><label>Referanse</label><input id="m_ref" placeholder="NS 3424:2012"></div>
+    </div>
+
+    <div class="field">
+      <label>📷 Bilder fra befaring</label>
+      <div class="cam-zone" onclick="trigCam()">
+        <div class="cam-icon">📸</div>
+        <strong>Ta bilde med kamera</strong>
+        <p>Velg fra galleri eller kamera – embeddes i rapporten</p>
+      </div>
+      <input type="file" id="camInput" accept="image/*" capture="environment" multiple onchange="handlePhotos(event)">
+      <div class="photo-grid" id="photoGrid"></div>
+    </div>
+
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal()">Avbryt</button>
+      <button class="btn btn-green" onclick="savePart()">Lagre</button>
+    </div>
+    <div style="height:8px"></div>
+    <button class="btn btn-danger btn-sm" id="delPartBtn" onclick="deletePart()" style="display:none">🗑 Slett</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+<script>
+// ═══ SERVICE WORKER ═══════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
+}
+
+// ═══ OFFLINE DETECTION ════════════════════════════════════
+function updateOnline() {
+  document.getElementById('offlineBanner').classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', updateOnline);
+window.addEventListener('offline', updateOnline);
+updateOnline();
+
+// ═══ PWA INSTALL ══════════════════════════════════════════
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('installBanner').classList.add('show');
+});
+async function installPWA() {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  const { outcome } = await deferredInstall.userChoice;
+  if (outcome === 'accepted') document.getElementById('installBanner').classList.remove('show');
+  deferredInstall = null;
+}
+
+// ═══ INDEXEDDB ════════════════════════════════════════════
+const DB_NAME = 'cbre_tv', DB_VER = 1, STORE = 'state';
+let db = null;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror = e => rej(e);
+  });
+}
+
+function dbPut(key, val) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(val, key);
+    tx.oncomplete = res;
+    tx.onerror = rej;
+  });
+}
+
+function dbGet(key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror = rej;
+  });
+}
+
+// ═══ STATE ════════════════════════════════════════════════
+let state = {
+  eiendom: {}, oppdrag: {}, sammendrag: {},
+  breeam: { q1: 3, q2: 2 },
+  deler: [], handlingsplan: [], utbedrede: []
+};
+let editId = null, curPhotos = [], curSug = null;
+
+// ═══ SUGGESTIONS ══════════════════════════════════════════
+const SUGG = {
+  a: {
+    "TG 0": { o:"Ingen synlige avvik. Tilfredsstillende tilstand observert under befaring.", t:"Ingen tiltak nødvendig. Oppretthold ordinær vedlikeholdsplan.", v:"Inspeksjon hvert 5. år." },
+    "TG 1": { o:"Svake symptomer observert. Mindre avvik som ikke påvirker funksjon negativt.", t:"Følges opp ved ordinært vedlikehold. Ingen akutt tiltak nødvendig.", v:"Inspeksjon hvert 3. år." },
+    "TG 2": { o:"Vesentlige avvik observert. Fuktinntrenging / avskalling / riss i konstruksjon.", t:"Tiltak planlegges innen 2–4 år. Innhent pristilbud fra fagentreprenør.", v:"Hyppigere inspeksjon – hvert 1–2 år frem til utbedring." },
+    "TG 3": { o:"Kraftige symptomer. Alvorlig avvik. Risiko for ytterligere skadeutvikling.", t:"Strakstiltak nødvendig. Kontakt fagentreprenør umiddelbart.", v:"Løpende overvåking frem til utbedring." },
+  },
+  b: {
+    "TG 0": { o:"Tekniske installasjoner i tilfredsstillende stand. Ingen avvik observert.", t:"Oppretthold gjeldende serviceavtaler.", v:"Halvårlig service iht. leverandøranbefaling." },
+    "TG 1": { o:"Svak støy eller mindre funksjonsfeil. Ikke kritisk.", t:"Utbedres ved neste planlagte service.", v:"Sjekkes ved neste service." },
+    "TG 2": { o:"Vesentlige avvik: redusert kapasitet, lekkasjer eller utilstrekkelig ytelse.", t:"Planlegg utskifting eller rehabilitering innen 1–3 år.", v:"Halvårlig service frem til utbedring." },
+    "TG 3": { o:"Kritiske feil. Anlegget fungerer ikke tilfredsstillende. Risiko for HMS.", t:"Strakstiltak: sikre midlertidig løsning. Igangsett utskifting umiddelbart.", v:"Løpende oppfølging frem til utbedring." },
+  },
+  c: {
+    "TG 1": { o:"Eldre komponenter, men anlegget fungerer. Ingen kritiske avvik.", t:"Planlegg oppgradering ved neste El-revisjon.", v:"El-kontroll iht. NEK 400 hvert 5. år." },
+    "TG 2": { o:"Vesentlige avvik. Delvis utdatert kursopplegg eller manglende vern.", t:"Utbedring planlegges innen 2–3 år. Gjennomfør ny El-kontroll.", v:"El-revisjon hvert 3. år frem til full oppgradering." },
+    "TG 3": { o:"Kritiske avvik. Fare for brann eller elektrisk ulykke.", t:"Strakstiltak: koble fra berørte kretser. Kontakt autorisert elektroinstallasjonsfirma.", v:"Revisjon etter utbedring, deretter hvert 5. år." },
+  },
+  d: {
+    "TG 0": { o:"Branntekniske installasjoner i tilfredsstillende stand.", t:"Ingen tiltak. Oppretthold serviceprogram.", v:"Halvårlig service og sertifisering iht. VTEK17." },
+    "TG 2": { o:"Vesentlige avvik i brannteknisk anlegg. Deler fungerer ikke optimalt.", t:"Utbedring planlegges snarest, senest innen 1 år.", v:"Økt servicefrekvens frem til utbedring." },
+    "TG 3": { o:"Kritisk svikt i brannteknisk anlegg. HMS-risiko. Strakstiltak påkrevd.", t:"Varsle eier og driftsansvarlig umiddelbart. Igangsett utbedring.", v:"Løpende overvåking frem til utbedring." },
+  },
+  e: {
+    "TG 1": { o:"Mindre slitasje observert. Anlegget fungerer, men nærmer seg utskiftingsbehov.", t:"Planlegg utskifting innen 5 år.", v:"Service iht. gjeldende forskrift." },
+    "TG 2": { o:"Vesentlige avvik. Anlegget har redusert funksjon.", t:"Utbedring planlegges innen 1–3 år.", v:"Hyppigere inspeksjon frem til utbedring." },
+    "TG 3": { o:"Kritisk svikt. Fare for driftstans eller personskade.", t:"Sett anlegget ut av drift og igangsett utbedring umiddelbart.", v:"Løpende overvåking frem til utbedring." },
+  },
+  f: {
+    "TG 0": { o:"Ingen forurensning eller helsemessige risikoer påvist. Radonmåling under tiltaksgrense.", t:"Ingen tiltak. Videre overvåking etter plan.", v:"Ny radonmåling hvert 5. år." },
+    "TG 1": { o:"Lavere nivåer av miljørisiko. Ikke kritisk, men bør følges opp.", t:"Overvåking videreføres. Kartlegging ved neste rehabilitering.", v:"Ny kartlegging ved rehabilitering." },
+    "TG 2": { o:"Forhøyede verdier målt eller mistanke om forurensning.", t:"Gjennomfør utvidet kartlegging. Involver miljørådgiver.", v:"Oppfølging av kartleggingsresultater." },
+    "TG 3": { o:"Alvorlig forurensning eller helseskadelige materialer påvist.", t:"Varsle berørte umiddelbart. Igangsett saneringsprosess.", v:"Kontinuerlig overvåking. Ny befaring etter sanering." },
+  },
+};
+
+function getSug(kat, tg) { return (SUGG[kat] || SUGG.a)[tg] || null; }
+
+// ═══ INIT ═════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  await openDB();
+  await loadState();
+  renderAll();
+  updateProgress();
+  const d = document.getElementById('o_dato');
+  if (!d.value) d.value = new Date().toISOString().split('T')[0];
+  document.getElementById('m_tg').addEventListener('change', onTgChange);
+  document.getElementById('m_kat').addEventListener('change', onTgChange);
+});
+
+// ═══ NAVIGATION ═══════════════════════════════════════════
+let curTab = 0;
+function goTab(n) {
+  document.querySelectorAll('.screen').forEach((s,i) => s.classList.toggle('active', i===n));
+  document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', i===n));
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active', i===n));
+  curTab = n;
+  if (n===2) renderActions();
+  if (n===3) renderSummary();
+  window.scrollTo(0,0);
+}
+
+// ═══ FIELDS ═══════════════════════════════════════════════
+function autosave() {
+  state.eiendom = { navn:v('e_navn'), adresse:v('e_adresse'), kommune:v('e_kommune'), byggeaar:v('e_aar'), bra:v('e_bra'), etasjer:v('e_etasjer'), type:v('e_type') };
+  state.oppdrag = { giver:v('o_giver'), forvalter:v('o_forvalter'), rnr:v('o_rnr'), dato:fmtDate(v('o_dato')), rapportdato:fmtDate(new Date().toISOString().split('T')[0]), av:v('o_av'), stilling:v('o_stilling') };
+  state.sammendrag = { inn:v('s_inn'), konkl:v('s_konkl') };
+  saveState(); updateProgress();
+}
+
+function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  const M = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
+  return `${parseInt(d)}. ${M[parseInt(m)-1]} ${y}`;
+}
+
+function fillFields() {
+  sv('e_navn',state.eiendom.navn); sv('e_adresse',state.eiendom.adresse);
+  sv('e_kommune',state.eiendom.kommune); sv('e_aar',state.eiendom.byggeaar);
+  sv('e_bra',state.eiendom.bra); sv('e_etasjer',state.eiendom.etasjer);
+  sv('e_type',state.eiendom.type);
+  sv('o_giver',state.oppdrag.giver); sv('o_forvalter',state.oppdrag.forvalter);
+  sv('o_rnr',state.oppdrag.rnr); sv('o_av',state.oppdrag.av); sv('o_stilling',state.oppdrag.stilling);
+  sv('s_inn',state.sammendrag.inn); sv('s_konkl',state.sammendrag.konkl);
+  if (state.breeam) { hiQ('q1',state.breeam.q1); hiQ('q2',state.breeam.q2); }
+}
+
+function sv(id, val) { const el=document.getElementById(id); if(el&&val!=null) el.value=val; }
+
+// ═══ BREEAM ════════════════════════════════════════════════
+function setQ(which, val, el) {
+  state.breeam[which] = val;
+  hiQ(which, val);
+  saveState();
+}
+function hiQ(which, val) {
+  document.querySelectorAll(`#${which}opts .q-opt`).forEach(el => {
+    el.classList.toggle('sel', parseInt(el.dataset.v) === val);
+  });
+}
+
+// ═══ PROGRESS ══════════════════════════════════════════════
+function updateProgress() {
+  const req = ['e_navn','e_adresse','o_giver','o_dato','o_av'];
+  const n = req.filter(id => v(id)).length;
+  const pct = Math.min(100, (n/req.length)*55 + Math.min(state.deler.length*5,45));
+  document.getElementById('progFill').style.width = pct+'%';
+  const lbl = pct < 30 ? 'Fyll inn eiendomsinfo' : pct < 60 ? 'Klar for befaring' : pct < 90 ? 'Befaring pågår...' : 'Klar for rapport!';
+  document.getElementById('progLabel').textContent = lbl;
+}
+
+// ═══ LEGEND ════════════════════════════════════════════════
+let legendOpen = false;
+function toggleLegend() {
+  legendOpen = !legendOpen;
+  document.getElementById('legendBody').style.display = legendOpen ? 'block' : 'none';
+  document.getElementById('legendChev').style.transform = legendOpen ? 'rotate(180deg)' : '';
+}
+
+// ═══ GRADE PICKERS ══════════════════════════════════════════
+function pickGrade(hiddenId, btn) {
+  const picker = btn.closest('.grade-row');
+  picker.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  const el = document.getElementById(hiddenId);
+  el.value = btn.dataset.v;
+  el.dispatchEvent(new Event('change'));
+}
+
+function setPickVal(hiddenId, val) {
+  const el = document.getElementById(hiddenId);
+  if (el) el.value = val;
+  const wrap = el?.closest('.field') || el?.closest('.grade-section');
+  if (!wrap) return;
+  wrap.querySelectorAll('.grade-btn').forEach(b => b.classList.toggle('on', b.dataset.v === val));
+}
+
+function onTgChange() {
+  const tg = document.getElementById('m_tg').value;
+  const kat = v('m_kat') || 'a';
+  // TG hint
+  const hints = {
+    "TG 0": { cls:'gh-0', txt:'✅ Ingen avvik – BREEAM: Mindre mangel' },
+    "TG 1": { cls:'gh-1', txt:'🟡 Svake symptomer – BREEAM: Mindre mangel' },
+    "TG 2": { cls:'gh-2', txt:'🟠 Middels symptomer – BREEAM: Større mangel (krevd utbedret for Q2)' },
+    "TG 3": { cls:'gh-3', txt:'🔴 Kraftige symptomer – BREEAM: Større mangel, strakstiltak' },
+    "IU":   { cls:'gh-iu', txt:'⚫ Ikke undersøkt – kommenter årsak nedenfor' },
+  };
+  const hint = document.getElementById('tg_hint');
+  if (hints[tg]) {
+    hint.textContent = hints[tg].txt;
+    hint.className = `grade-hint show ${hints[tg].cls}`;
+  } else { hint.className = 'grade-hint'; }
+  // Suggestion
+  const sug = getSug(kat, tg);
+  const box = document.getElementById('sugBox');
+  if (sug && tg && tg !== 'IU') {
+    curSug = sug;
+    document.getElementById('sugContent').innerHTML =
+      `<div class="sug-item">${sug.o}</div><div class="sug-item">${sug.t}</div><div class="sug-item">${sug.v}</div>`;
+    box.classList.add('show');
+  } else { box.classList.remove('show'); curSug = null; }
+}
+
+function applySug() {
+  if (!curSug) return;
+  if (!v('m_obs'))  document.getElementById('m_obs').value = curSug.o;
+  if (!v('m_tilt')) document.getElementById('m_tilt').value = curSug.t;
+  if (!v('m_ved'))  document.getElementById('m_ved').value = curSug.v;
+  toast('✅ Standardtekster lagt inn','ok');
+}
+
+function onKatChange() { onTgChange(); }
+
+// ═══ CAMERA ════════════════════════════════════════════════
+function trigCam() { document.getElementById('camInput').click(); }
+
+function handlePhotos(e) {
+  Array.from(e.target.files).forEach(f => {
+    // Compress to max 800px wide
+    const img = new Image();
+    const url = URL.createObjectURL(f);
+    img.onload = () => {
+      const maxW = 800;
+      const scale = img.width > maxW ? maxW / img.width : 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+      URL.revokeObjectURL(url);
+      curPhotos.push({ dataUrl, caption: '' });
+      renderPhotoGrid();
+    };
+    img.src = url;
+  });
+  e.target.value = '';
+}
+
+function renderPhotoGrid() {
+  document.getElementById('photoGrid').innerHTML = curPhotos.map((p,i) => `
+    <div>
+      <div class="photo-wrap">
+        <img src="${p.dataUrl}" alt="Bilde ${i+1}">
+        <button class="photo-del" onclick="delPhoto(${i})">✕</button>
+      </div>
+      <input class="photo-caption-input" value="${p.caption}" placeholder="Bildetekst..." oninput="updCaption(${i},this.value)">
+    </div>`).join('');
+}
+
+function delPhoto(i) { curPhotos.splice(i,1); renderPhotoGrid(); }
+function updCaption(i, v) { if (curPhotos[i]) curPhotos[i].caption = v; }
+
+// ═══ MODAL ════════════════════════════════════════════════
+function openAddPart() {
+  editId = null; curPhotos = [];
+  document.getElementById('modalTitle').textContent = 'Ny bygningsdel';
+  document.getElementById('modalSub').textContent = 'Fyll inn tilstand og ta bilder';
+  document.getElementById('delPartBtn').style.display = 'none';
+  clearModal(); renderPhotoGrid();
+  document.getElementById('modal').classList.add('open');
+}
+
+function openEditPart(id) {
+  const p = state.deler.find(d=>d.id===id); if (!p) return;
+  editId = id; curPhotos = (p.bilder||[]).map(b=>({dataUrl:b.dataUrl,caption:b.caption||''}));
+  document.getElementById('modalTitle').textContent = 'Rediger: ' + p.navn;
+  document.getElementById('modalSub').textContent = p.kategori;
+  document.getElementById('delPartBtn').style.display = 'block';
+  sv('m_kat',p.kat); sv('m_kode',p.kode); sv('m_navn',p.navn);
+  setPickVal('m_tg',p.tg); setPickVal('m_kg',p.kg||'');
+  sv('m_prio',p.prio); sv('m_rek',p.rek);
+  sv('m_besk',p.besk); sv('m_obs',p.obs); sv('m_tilt',p.tilt);
+  sv('m_ved',p.ved); sv('m_kost',p.kost); sv('m_ref',p.ref||'NS 3424:2012');
+  onTgChange(); renderPhotoGrid();
+  document.getElementById('modal').classList.add('open');
+}
+
+function clearModal() {
+  ['m_kode','m_navn','m_besk','m_obs','m_tilt','m_ved','m_kost'].forEach(id => sv(id,''));
+  sv('m_ref','NS 3424:2012'); sv('m_prio','2–4 år'); sv('m_rek','');
+  document.getElementById('m_tg').value=''; document.getElementById('m_kg').value='';
+  document.querySelectorAll('#modal .grade-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tg_hint').className='grade-hint';
+  document.getElementById('sugBox').classList.remove('show'); curSug=null;
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function savePart() {
+  const navn=v('m_navn'), tg=document.getElementById('m_tg').value;
+  const obs=v('m_obs');
+  if (!navn) { toast('⚠️ Navn er påkrevd'); return; }
+  if (!tg)   { toast('⚠️ Velg tilstandsgrad (TG)'); return; }
+  if (!obs)  { toast('⚠️ Fyll inn observasjoner'); return; }
+
+  const katMap = { a:'a) Bygningsteknisk',b:'b) VVS-teknisk',c:'c) Elektroteknisk',d:'d) Brannteknisk',e:'e) Andre tekniske',f:'f) Helse og miljø' };
+  const part = {
+    id: editId || Date.now().toString(),
+    kat: v('m_kat')||'a', kategori: katMap[v('m_kat')||'a'],
+    kode: v('m_kode'), navn, tg,
+    kg: document.getElementById('m_kg').value || 'KG 0',
+    prio: v('m_prio')||'2–4 år', rek: v('m_rek')||'3',
+    besk: v('m_besk'), obs, tilt: v('m_tilt'),
+    ved: v('m_ved'), kost: v('m_kost'),
+    ref: v('m_ref')||'NS 3424:2012',
+    bilder: curPhotos.map(p=>({dataUrl:p.dataUrl,caption:p.caption})),
+  };
+  if (editId) { const idx=state.deler.findIndex(d=>d.id===editId); if(idx>=0) state.deler[idx]=part; }
+  else state.deler.push(part);
+  saveState(); renderPartsList(); closeModal();
+  toast('✅ Lagret','ok'); updateProgress();
+}
+
+function deletePart() {
+  if (!editId||!confirm('Slette?')) return;
+  state.deler = state.deler.filter(d=>d.id!==editId);
+  saveState(); renderPartsList(); closeModal(); toast('Slettet');
+}
+
+// ═══ PARTS LIST ══════════════════════════════════════════
+function renderPartsList() {
+  const el = document.getElementById('partsList');
+  if (!state.deler.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><p>Ingen bygningsdeler ennå.<br>Trykk «＋ Legg til» eller last inn standardmal.</p></div>`;
+    updateTabCount(1, 0); return;
+  }
+  const sorted = [...state.deler].sort((a,b)=>a.kat.localeCompare(b.kat));
+  const groups = {};
+  sorted.forEach(p=>{if(!groups[p.kat])groups[p.kat]=[];groups[p.kat].push(p);});
+
+  const tgCls = t => { const m={'TG 0':'tg-0','TG 1':'tg-1','TG 2':'tg-2','TG 3':'tg-3','IU':'tg-iu'}; return m[t]||'tg-empty'; };
+
+  el.innerHTML = Object.entries(groups).map(([kat,parts]) => `
+    <span class="section-lbl">${parts[0].kategori}</span>
+    ${parts.map(p=>`
+      <div class="part-item" id="pi-${p.id}">
+        <div class="part-head" onclick="togglePart('${p.id}')">
+          <span class="part-code">${p.kode||'—'}</span>
+          <div class="part-info">
+            <div class="part-name">${p.navn}</div>
+            <div class="part-obs">${p.obs||'Ingen observasjoner ennå'}</div>
+          </div>
+          <div class="part-meta">
+            <span class="tg-badge ${tgCls(p.tg)}">${p.tg||'—'}</span>
+            ${p.bilder?.length?`<span class="photo-count">📷 ${p.bilder.length}</span>`:''}
+          </div>
+          <span class="chevron">⌄</span>
+        </div>
+        <div class="part-expand">
+          <div style="padding-top:10px">
+            ${p.tilt?`<p style="font-size:12px;color:var(--gray-500);margin-bottom:8px"><strong>Tiltak:</strong> ${p.tilt}</p>`:''}
+            ${p.bilder?.length?`<div class="photo-grid">${p.bilder.map(b=>`<div class="photo-wrap"><img src="${b.dataUrl}" alt="${b.caption||''}"></div>`).join('')}</div>`:''}
+            <div class="btn-row" style="margin-top:10px">
+              <button class="btn btn-ghost btn-sm" onclick="openEditPart('${p.id}')">✏️ Rediger</button>
+            </div>
+          </div>
+        </div>
+      </div>`).join('')}`).join('');
+  updateTabCount(1, state.deler.length);
+}
+
+function togglePart(id) { document.getElementById('pi-'+id)?.classList.toggle('open'); }
+
+function updateTabCount(tabIdx, n) {
+  const tab = document.getElementById('tab'+tabIdx);
+  tab.querySelectorAll('.tab-pip').forEach(e=>e.remove());
+  if (n>0) tab.insertAdjacentHTML('beforeend',`<span class="tab-pip">${n}</span>`);
+}
+
+// ═══ TEMPLATE ════════════════════════════════════════════
+function loadTemplate() {
+  if (state.deler.length>0&&!confirm('Legg til standarddeler? Eksisterende beholdes.')) return;
+  const katMap={a:'a) Bygningsteknisk',b:'b) VVS-teknisk',c:'c) Elektroteknisk',d:'d) Brannteknisk',e:'e) Andre tekniske',f:'f) Helse og miljø'};
+  [
+    {k:'a',kode:'20',navn:'Grunn og fundamenter',ref:'NS 3424:2012'},
+    {k:'a',kode:'32',navn:'Yttervegger og fasader',ref:'NS 3424:2012 / SINTEF 523.121'},
+    {k:'a',kode:'33',navn:'Vinduer og ytterdører',ref:'TEK17 / NS-EN ISO 6946'},
+    {k:'a',kode:'35',navn:'Yttertak',ref:'SINTEF Byggforsk 525.201'},
+    {k:'b',kode:'56',navn:'Ventilasjonsanlegg',ref:'NS-EN 13779 / TEK17 §13'},
+    {k:'b',kode:'52',navn:'Varmeanlegg',ref:'NS 3424:2012'},
+    {k:'b',kode:'51',navn:'Sanitæranlegg',ref:'NS 3424:2012'},
+    {k:'c',kode:'57',navn:'Elektriske installasjoner og svakstrøm',ref:'NEK 400:2022'},
+    {k:'d',kode:'74',navn:'Branntekniske installasjoner',ref:'VTEK17 / NS 3960'},
+    {k:'e',kode:'63',navn:'Heis og løfteanordninger',ref:'Heisforskriften / NS-EN 81'},
+    {k:'f',kode:'HMF',navn:'Helse- og miljøforhold (forurensning, radon)',ref:'NS-EN ISO 11665'},
+  ].forEach(t=>{
+    if(state.deler.find(d=>d.kode===t.kode&&d.kat===t.k)) return;
+    state.deler.push({id:Date.now().toString()+Math.random(),kat:t.k,kategori:katMap[t.k],kode:t.kode,navn:t.navn,tg:'',kg:'',prio:'Løpende',rek:'3',besk:'',obs:'',tilt:'',ved:'',kost:'',ref:t.ref,bilder:[]});
+  });
+  saveState(); renderPartsList(); toast('✅ Standardmal lastet','ok'); updateProgress();
+}
+
+// ═══ ACTIONS ══════════════════════════════════════════════
+function renderActions() {
+  // Auto-generate from deler
+  const existIds = new Set((state.handlingsplan||[]).map(h=>h.partId));
+  state.deler.filter(d=>['TG 1','TG 2','TG 3'].includes(d.tg)&&!existIds.has(d.id)).forEach(d=>{
+    (state.handlingsplan=state.handlingsplan||[]).push({ id:'hp-'+d.id, partId:d.id, mangel:`${d.kode?d.kode+' – ':''}${d.navn} (${d.tg})`, tilt:d.tilt||'', tg:d.tg, frist:'', ansv:'' });
+  });
+  const pids = new Set(state.deler.map(d=>d.id));
+  state.handlingsplan = (state.handlingsplan||[]).filter(h=>!h.partId||pids.has(h.partId));
+  saveState();
+
+  const el = document.getElementById('actionList');
+  if (!(state.handlingsplan||[]).length) {
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><p>Ingen TG 1–3 bygningsdeler registrert.<br>Legg til bygningsdeler i Befaring-fanen.</p></div>`;
+    updateTabCount(2,0); return;
+  }
+
+  const tgCls = t=>({'TG 1':'tg-1','TG 2':'tg-2','TG 3':'tg-3'}[t]||'tg-empty');
+  el.innerHTML = state.handlingsplan.map((h,i)=>`
+    <div class="part-item" id="ac-${h.id}">
+      <div class="part-head" onclick="document.getElementById('ac-${h.id}').classList.toggle('open')">
+        <span style="background:var(--green);color:white;font-size:10px;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</span>
+        <div class="part-info">
+          <div class="part-name">${h.mangel}</div>
+          <div class="part-obs" style="color:${h.frist?'var(--gray-500)':'var(--red)'}">${h.frist?'Frist: '+h.frist:'⚠ Frist ikke satt'}</div>
+        </div>
+        <span class="tg-badge ${tgCls(h.tg)}">${h.tg}</span>
+        <span class="chevron">⌄</span>
+      </div>
+      <div class="part-expand">
+        <div style="padding-top:10px">
+          <div class="field"><label>Planlagt tiltak</label>
+            <textarea onchange="updAc('${h.id}','tilt',this.value)">${h.tilt||''}</textarea>
+            <div style="font-size:10px;color:var(--gray-500);margin-top:3px">BREEAM krit. 4: Beskriv konkret hva som skal gjøres.</div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Frist <span class="req">*</span></label>
+              <input placeholder="Q2 2026" value="${h.frist||''}" onchange="updAc('${h.id}','frist',this.value)">
+              <div style="font-size:10px;color:var(--gray-500);margin-top:3px">Påkrevd av BREEAM krit. 4.</div>
+            </div>
+            <div class="field"><label>Ansvarlig <span class="req">*</span></label>
+              <input placeholder="Navn, selskap" value="${h.ansv||''}" onchange="updAc('${h.id}','ansv',this.value)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+  updateTabCount(2, state.handlingsplan.length);
+  renderUtbedrede();
+}
+
+function updAc(id,k,val) { const h=state.handlingsplan.find(h=>h.id===id); if(h){h[k]=val;saveState();} }
+
+function addUtbedret() {
+  (state.utbedrede=state.utbedrede||[]).push({id:Date.now().toString(),mangel:'',tilt:'',dato:'',dok:''});
+  saveState(); renderUtbedrede();
+}
+
+function renderUtbedrede() {
+  const el=document.getElementById('utbedretList');
+  if(!(state.utbedrede||[]).length){el.innerHTML='';return;}
+  el.innerHTML=state.utbedrede.map((u,i)=>`
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-body">
+        <div class="field"><label>Hva ble utbedret?</label>
+          <input value="${u.mangel||''}" placeholder="Mangelbeskrivelse" oninput="updU('${u.id}','mangel',this.value)"></div>
+        <div class="field"><label>Tiltak gjennomført</label>
+          <input value="${u.tilt||''}" placeholder="Hva ble gjort" oninput="updU('${u.id}','tilt',this.value)"></div>
+        <div class="row2">
+          <div class="field"><label>Dato</label>
+            <input value="${u.dato||''}" placeholder="Juni 2024" oninput="updU('${u.id}','dato',this.value)"></div>
+          <div class="field"><label>Dokumentasjon</label>
+            <input value="${u.dok||''}" placeholder="Faktura, rapport..." oninput="updU('${u.id}','dok',this.value)">
+            <div style="font-size:10px;color:var(--gray-500);margin-top:3px">BREEAM krit. 5 krever dokumentasjon.</div>
+          </div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="delU('${u.id}')">🗑 Fjern</button>
+      </div>
+    </div>`).join('');
+}
+
+function updU(id,k,v2){const u=state.utbedrede.find(u=>u.id===id);if(u){u[k]=v2;saveState();}}
+function delU(id){state.utbedrede=state.utbedrede.filter(u=>u.id!==id);saveState();renderUtbedrede();}
+
+// ═══ SUMMARY ═════════════════════════════════════════════
+function renderSummary() {
+  const q1=state.breeam?.q1||0, q2=state.breeam?.q2||0;
+  document.getElementById('scoreNum').textContent = q1+q2;
+  const rtgs=['Ingen poeng','Lav','Under middels','Middels','Over middels','God','Veldig god','Maksimum'];
+  document.getElementById('scoreLbl').textContent = rtgs[q1+q2]||'';
+
+  const tgC={'TG 0':0,'TG 1':0,'TG 2':0,'TG 3':0,'IU':0};
+  state.deler.forEach(d=>{if(tgC[d.tg]!==undefined)tgC[d.tg]++;});
+  const total=state.deler.length||1;
+
+  const clrs={'TG 0':'var(--green)','TG 1':'#4CAF50','TG 2':'var(--amber)','TG 3':'var(--red)','IU':'#9E9E9E'};
+  const txtClrs={'TG 0':'white','TG 1':'white','TG 2':'#333','TG 3':'white','IU':'white'};
+
+  document.getElementById('tgDist').innerHTML = Object.entries(tgC).map(([tg,n])=>`
+    <div class="tg-dist-row">
+      <span class="tg-dist-label" style="background:${clrs[tg]};color:${txtClrs[tg]}">${tg}</span>
+      <div class="tg-dist-bar-wrap"><div class="tg-dist-bar" style="background:${clrs[tg]};width:${(n/total*100).toFixed(0)}%"></div></div>
+      <span class="tg-dist-count">${n}</span>
+    </div>`).join('');
+
+  document.getElementById('summaryBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:13px;color:var(--gray-500)">Eiendom</span><span style="font-size:13px;font-weight:600">${state.eiendom.navn||'—'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:13px;color:var(--gray-500)">Bygningsdeler</span><span style="font-size:13px;font-weight:600">${state.deler.length}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:13px;color:var(--gray-500)">Bilder tatt</span><span style="font-size:13px;font-weight:600">${state.deler.reduce((s,d)=>s+(d.bilder||[]).length,0)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:13px;color:var(--gray-500)">Tiltak i handlingsplan</span><span style="font-size:13px;font-weight:600">${(state.handlingsplan||[]).length}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="font-size:13px;color:var(--gray-500)">Befaringsdato</span><span style="font-size:13px;font-weight:600">${state.oppdrag.dato||'—'}</span></div>
+    </div>`;
+
+  // Warnings
+  const warn=[];
+  if(!state.eiendom.navn) warn.push('Eiendommens navn mangler');
+  if(!state.oppdrag.av) warn.push('Utarbeidet av mangler (krevd for krit. 7)');
+  if(!state.oppdrag.dato) warn.push('Befaringsdato mangler');
+  if(!state.deler.length) warn.push('Ingen bygningsdeler registrert');
+  const cats=new Set(state.deler.map(d=>d.kat));
+  const catNames={a:'a) Bygningsteknisk',b:'b) VVS',c:'c) Elektroteknisk',d:'d) Brannteknisk',e:'e) Andre tekniske',f:'f) Helse/miljø'};
+  ['a','b','c','d','e','f'].filter(k=>!cats.has(k)).forEach(k=>warn.push(`Kategori ${catNames[k]} mangler (Rsc 01 krit. 2)`));
+
+  const wc=document.getElementById('warnCard');
+  if(warn.length) {
+    wc.style.display='block';
+    wc.innerHTML=`<div class="warn-card"><div class="warn-title">⚠️ Mangler for full compliance</div>${warn.map(w=>`<div class="warn-item">${w}</div>`).join('')}</div>`;
+  } else wc.style.display='none';
+}
+
+// ═══ DOCX EXPORT ═════════════════════════════════════════
+async function genRapport() {
+  const btn=document.getElementById('expBtn'), spin=document.getElementById('expSpinner');
+  btn.style.opacity='.7'; spin.style.display='block';
+  try {
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+            Header, Footer, AlignmentType, HeadingLevel, BorderStyle, WidthType,
+            ShadingType, VerticalAlign, PageNumberElement, LevelFormat,
+            TabStopType, TabStopPosition, PageBreak, ImageRun } = docx;
+
+    const G="003F2D",GL="17E88F",MG="4D4D4D",LG="F5F5F5",W="FFFFFF",R="D32F2F",A="FFC107",DK="1A1A1A";
+    const TG_C={"TG 0":G,"TG 1":"4CAF50","TG 2":A,"TG 3":R,"IU":"9E9E9E"};
+    const KG_C={"KG 0":G,"KG 1":"4CAF50","KG 2":A,"KG 3":R};
+    const thin={style:BorderStyle.SINGLE,size:1,color:"CCCCCC"};
+    const bord={top:thin,bottom:thin,left:thin,right:thin};
+    const noB={style:BorderStyle.NONE,size:0,color:"FFFFFF"};
+    const noBord={top:noB,bottom:noB,left:noB,right:noB};
+
+    function c(txt,w,o={}){
+      return new TableCell({borders:bord,width:{size:w,type:WidthType.DXA},shading:{fill:o.bg||W,type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:120},columnSpan:o.span,verticalAlign:VerticalAlign.TOP,
+        children:[new Paragraph({alignment:o.align||AlignmentType.LEFT,spacing:{before:40,after:40},children:[new TextRun({text:String(txt??'—'),font:"Calibri",size:o.sz||20,bold:o.bold||false,color:o.color||DK,italics:o.italic||false})]})]});
+    }
+    function gCell(val,w,cm){
+      const fill=cm[val]||"9E9E9E",tc=(val==="TG 2"||val==="KG 2")?DK:W;
+      return new TableCell({borders:bord,width:{size:w,type:WidthType.DXA},shading:{fill,type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:60,right:60},verticalAlign:VerticalAlign.CENTER,
+        children:[new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:40,after:40},children:[new TextRun({text:String(val||'—'),font:"Calibri",size:18,bold:true,color:tc})]})]});
+    }
+    function hc(txt,w,span){
+      return new TableCell({borders:bord,width:{size:w,type:WidthType.DXA},shading:{fill:G,type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:120},columnSpan:span,
+        children:[new Paragraph({spacing:{before:40,after:40},children:[new TextRun({text:txt,font:"Calibri",size:20,bold:true,color:W})]})]});
+    }
+    function p(txt,o={}){return new Paragraph({alignment:o.align,spacing:{before:o.before||80,after:o.after||80},border:o.border,children:[new TextRun({text:String(txt||''),font:"Calibri",size:o.sz||22,bold:o.bold,color:o.color||DK})]});}
+    function h(txt,lv){const lm={1:HeadingLevel.HEADING_1,2:HeadingLevel.HEADING_2,3:HeadingLevel.HEADING_3};return new Paragraph({heading:lm[lv],spacing:{before:lv===1?440:280,after:120},children:[new TextRun({text:txt,bold:true,font:"Calibri"})]});}
+    function rule(){return new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:12,color:G,space:1}},children:[],spacing:{before:0,after:200}});}
+    function el(){return new Paragraph({children:[new TextRun("")],spacing:{before:0,after:0}});}
+
+    async function imgRuns(bilder){
+      const runs=[];
+      for(const b of(bilder||[])){
+        try{
+          const[meta,b64]=b.dataUrl.split(',');
+          const type=meta.includes('jpeg')||meta.includes('jpg')?'jpg':'png';
+          const bin=atob(b64); const arr=new Uint8Array(bin.length);
+          for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+          runs.push(new ImageRun({data:arr.buffer,transformation:{width:160,height:120},type}));
+          if(b.caption) runs.push(new TextRun({text:'  '+b.caption+'  ',font:"Calibri",size:16,color:MG,italics:true}));
+        }catch(e){}
+      }
+      return runs;
+    }
+
+    const e2=state.eiendom,op=state.oppdrag,q1=state.breeam?.q1||0,q2=state.breeam?.q2||0;
+    const q1t=["Ingen tilstandsvurdering","Utarbeidet av forvalter","Forvalter iht. NS 3424:2012","Uavhengig tredjepart iht. NS 3424:2012"][q1]||"—";
+    const q2t=["Ingen utbedring, ingen handlingsplan","Handlingsplan foreligger","Alle større mangler (TG 2+3) utbedret","Alle større utbedret + handlingsplan","Alle større og mindre mangler utbedret"][q2]||"—";
+
+    // FORSIDE
+    const forside=[
+      new Paragraph({border:{top:{style:BorderStyle.SINGLE,size:48,color:G,space:1}},children:[],spacing:{before:0,after:0}}),
+      el(),el(),el(),el(),
+      p("TILSTANDSVURDERING",{sz:52,bold:true,color:G,before:0,after:80}),
+      p("NS 3424:2012  ·  BREEAM-NOR In-Use v6.0 Rsc 01",{sz:22,color:MG,before:0,after:240}),
+      p(e2.navn||'',{sz:40,color:DK,before:0,after:80}),
+      p((e2.adresse||'')+(e2.kommune?', '+e2.kommune:''),{sz:24,color:MG,before:0,after:400}),
+      el(),el(),el(),el(),el(),el(),
+      new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[2256,2256,2257,2257],borders:noBord,rows:[
+        new TableRow({children:[c("Oppdragsgiver",2256,{bold:true,color:G}),c("Befaringsdato",2256,{bold:true,color:G}),c("Rapportnummer",2257,{bold:true,color:G}),c("Utarbeidet av",2257,{bold:true,color:G})]}),
+        new TableRow({children:[c(op.giver,2256),c(op.dato||op.rapportdato,2256),c(op.rnr,2257),c(op.av,2257)]}),
+      ]}),
+      el(),
+      new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:8,color:GL,space:1}},children:[new TextRun({text:"CBRE AS  ·  Sustainability & Energy Services  ·  Konfidensielt",font:"Calibri",size:18,color:MG})],spacing:{before:200,after:0}}),
+      new Paragraph({children:[new PageBreak()]}),
+    ];
+
+    // SEK 1
+    const sek1=[
+      h("1. OPPDRAG OG EIENDOMSINFORMASJON",1),rule(),
+      new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[3000,6026],rows:[
+        new TableRow({children:[c("Eiendom",3000,{bold:true,bg:LG}),c(e2.navn,6026)]}),
+        new TableRow({children:[c("Adresse",3000,{bold:true,bg:LG}),c((e2.adresse||'')+(e2.kommune?', '+e2.kommune:''),6026)]}),
+        new TableRow({children:[c("Byggeår",3000,{bold:true,bg:LG}),c(e2.byggeaar,6026)]}),
+        new TableRow({children:[c("BRA (m²)",3000,{bold:true,bg:LG}),c(e2.bra?e2.bra+' m²':'—',6026)]}),
+        new TableRow({children:[c("Bygningstype",3000,{bold:true,bg:LG}),c(e2.type,6026)]}),
+        new TableRow({children:[c("Oppdragsgiver",3000,{bold:true,bg:LG}),c(op.giver,6026)]}),
+        new TableRow({children:[c("Forvalter",3000,{bold:true,bg:LG}),c(op.forvalter,6026)]}),
+        new TableRow({children:[c("Befaringsdato",3000,{bold:true,bg:LG}),c(op.dato,6026)]}),
+        new TableRow({children:[c("Rapportnummer",3000,{bold:true,bg:LG}),c(op.rnr,6026)]}),
+        new TableRow({children:[c("Utarbeidet av",3000,{bold:true,bg:LG}),c((op.av||'')+(op.stilling?', '+op.stilling:'')+', CBRE AS',6026)]}),
+      ]}),
+      el(),h("Sammendrag",2),p(state.sammendrag?.inn||''),el(),p(state.sammendrag?.konkl||''),
+      el(),h("BREEAM-NOR Rsc 01 – Poengvurdering",2),
+      new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[600,5426,1000,2000],rows:[
+        new TableRow({children:[hc("P",600),hc("Svar",5426),hc("Poeng",1000),hc("Ref.",2000)]}),
+        new TableRow({children:[c("Q1",600,{bold:true,bg:LG}),c("Er tilstandsvurdering utarbeidet siste 5 år?",5426,{bold:true,bg:LG}),c("maks 3p",1000,{bg:LG}),c("",2000,{bg:LG})]}),
+        new TableRow({children:[c(String(q1),600),c(q1t,5426),c(q1+" poeng",1000,{bg:G,color:W,bold:true,align:AlignmentType.CENTER}),c("Seksjon 6.2",2000)]}),
+        new TableRow({children:[c("Q2",600,{bold:true,bg:LG}),c("Er identifiserte mangler utbedret?",5426,{bold:true,bg:LG}),c("maks 4p",1000,{bg:LG}),c("",2000,{bg:LG})]}),
+        new TableRow({children:[c(String(q2),600),c(q2t,5426),c(q2+" poeng",1000,{bg:G,color:W,bold:true,align:AlignmentType.CENTER}),c("Seksjon 4",2000)]}),
+        new TableRow({children:[
+          new TableCell({borders:bord,width:{size:600,type:WidthType.DXA},columnSpan:3,shading:{fill:G,type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:120},children:[new Paragraph({children:[new TextRun({text:"TOTALT RSC 01",font:"Calibri",size:22,bold:true,color:W})],spacing:{before:60,after:60}})]}),
+          c(String(q1+q2)+" / 7 poeng",2000,{bg:G,color:W,bold:true}),
+        ]}),
+      ]}),
+      new Paragraph({children:[new PageBreak()]}),
+    ];
+
+    // SEK 2: Tilstandsoversikt
+    const sek2=[
+      h("2. SAMLET TILSTANDSOVERSIKT",1),rule(),
+      p("Tabellen dekker alle hovedelementer i BREEAM-NOR Rsc 01 kriterium 2 a–f, med TG og KG iht. NS 3424:2012."),el(),
+      new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[550,1200,2400,800,800,900,2376],rows:[
+        new TableRow({tableHeader:true,children:[hc("Kode",550),hc("Kat.",1200),hc("Bygningsdel",2400),hc("TG",800),hc("KG",800),hc("Prioritet",900),hc("Kommentar",2376)]}),
+        ...state.deler.map((d,i)=>new TableRow({children:[
+          c(d.kode,550,{bg:i%2?LG:W}),c(d.kategori,1200,{bg:i%2?LG:W,sz:17}),c(d.navn,2400,{bg:i%2?LG:W}),
+          gCell(d.tg,800,TG_C),gCell(d.kg||"KG 0",800,KG_C),
+          c(d.prio,900,{bg:i%2?LG:W,sz:17}),
+          c((d.obs||'').substring(0,80)+(d.obs?.length>80?'…':''),2376,{bg:i%2?LG:W,sz:17}),
+        ]})),
+      ]}),
+      new Paragraph({children:[new PageBreak()]}),
+    ];
+
+    // SEK 3: Detaljer
+    const sek3=[h("3. DETALJERTE VURDERINGER",1),rule()];
+    for(let i=0;i<state.deler.length;i++){
+      const d=state.deler[i];
+      sek3.push(
+        h(`3.${i+1}  ${d.kode?d.kode+' – ':''}${d.navn}`,2),
+        new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[2200,3413,1700,1713],rows:[
+          new TableRow({children:[hc("Tilstandsgrad (TG)",2200),hc("Konsekvensgrad (KG)",3413),hc("Prioritet",1700),hc("Rekkefølge",1713)]}),
+          new TableRow({children:[gCell(d.tg,2200,TG_C),gCell(d.kg||"KG 0",3413,KG_C),c(d.prio,1700),c(d.rek||'—',1713)]}),
+        ]}),
+        new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[2200,6826],rows:[
+          new TableRow({children:[c("Kategori",2200,{bold:true,bg:LG}),c(d.kategori,6826)]}),
+          new TableRow({children:[c("Beskrivelse",2200,{bold:true,bg:LG}),c(d.besk||'—',6826)]}),
+          new TableRow({children:[c("Observasjoner",2200,{bold:true,bg:LG}),c(d.obs||'—',6826)]}),
+          new TableRow({children:[c("Anbefalte tiltak",2200,{bold:true,bg:LG}),c(d.tilt||'Ingen umiddelbare tiltak nødvendig',6826)]}),
+          new TableRow({children:[c("Vedlikehold (krit. 6)",2200,{bold:true,bg:LG}),c(d.ved||'Inkluderes i ordinær vedlikeholdsplan',6826)]}),
+          new TableRow({children:[c("Kostnadsvurdering",2200,{bold:true,bg:LG}),c(d.kost||'Ikke estimert',6826)]}),
+          new TableRow({children:[c("Referanse",2200,{bold:true,bg:LG}),c(d.ref||'NS 3424:2012',6826)]}),
+        ]}),
+      );
+      if(d.bilder?.length){
+        const runs=await imgRuns(d.bilder);
+        if(runs.length){
+          sek3.push(p("Bilder fra befaring:",{bold:true,before:160,after:80}),
+            new Paragraph({children:runs,spacing:{before:80,after:160}}));
+        }
+      }
+      sek3.push(el());
+    }
+    sek3.push(new Paragraph({children:[new PageBreak()]}));
+
+    // SEK 4: Handlingsplan
+    const sek4=[
+      h("4. HANDLINGSPLAN FOR LUKKING AV MANGLER",1),rule(),
+      p(`Handlingsplanen er datert ${op.rapportdato||op.dato||'—'} og følger BREEAM-NOR Rsc 01 krit. 4.`),el(),
+      new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[400,2200,2500,800,1600,1526],rows:[
+        new TableRow({tableHeader:true,children:[hc("#",400),hc("Mangel",2200),hc("Planlagt tiltak",2500),hc("TG",800),hc("Frist",1600),hc("Ansvarlig",1526)]}),
+        ...(state.handlingsplan||[]).map((hh,i)=>new TableRow({children:[
+          c(String(i+1),400,{bg:i%2?LG:W}),c(hh.mangel,2200,{bg:i%2?LG:W}),c(hh.tilt||'—',2500,{bg:i%2?LG:W}),
+          gCell(hh.tg,800,TG_C),c(hh.frist||'—',1600,{bg:i%2?LG:W}),c(hh.ansv||'—',1526,{bg:i%2?LG:W,sz:17}),
+        ]})),
+      ]}),
+      el(),h("4.2 Allerede utbedrede mangler (krit. 5)",2),
+      new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[400,2500,2500,1400,1826],rows:[
+        new TableRow({tableHeader:true,children:[hc("#",400),hc("Mangel",2500),hc("Tiltak",2500),hc("Dato",1400),hc("Dokumentasjon",1826)]}),
+        ...(state.utbedrede||[]).length?(state.utbedrede).map((u,i)=>new TableRow({children:[
+          c(String(i+1),400,{bg:i%2?LG:W}),c(u.mangel,2500,{bg:i%2?LG:W}),c(u.tilt,2500,{bg:i%2?LG:W}),c(u.dato,1400,{bg:i%2?LG:W}),c(u.dok,1826,{bg:i%2?LG:W,sz:17}),
+        ]})): [new TableRow({children:[c("Ingen utbedrede mangler registrert",9026,{span:5})]})],
+      ]}),
+      new Paragraph({children:[new PageBreak()]}),
+    ];
+
+    // SEK 5: Kvalifikasjon
+    const sek5=[
+      h("5. FORUTSETNINGER OG FAGLIG GRUNNLAG",1),rule(),
+      h("5.1 Metode",2),p("Tilstandsvurderingen er gjennomført iht. NS 3424:2012 og BREEAM-NOR In-Use v6.0 emne Rsc 01."),el(),
+      h("5.2 Kvalifisert person (Rsc 01 krit. 7)",2),
+      new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[3000,6026],rows:[
+        new TableRow({children:[c("Utarbeidet av",3000,{bold:true,bg:LG}),c(op.av,6026)]}),
+        new TableRow({children:[c("Stilling",3000,{bold:true,bg:LG}),c(op.stilling,6026)]}),
+        new TableRow({children:[c("Virksomhet",3000,{bold:true,bg:LG}),c("CBRE AS",6026)]}),
+      ]}),
+      el(),h("5.3 Begrensninger",2),
+      p("Rapporten er basert på visuell befaring uten destruktive inngrep. Skjulte konstruksjoner og miljøforhold er ikke dekket med mindre eksplisitt angitt."),
+      el(),el(),p(`Dato: ${op.rapportdato||op.dato||'—'}`,{bold:true}),p(`Signatur: ${op.av||'—'}, CBRE AS`),
+    ];
+
+    // Header/Footer
+    const header=new Header({children:[new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:6,color:G,space:4}},spacing:{before:0,after:80},children:[new TextRun({text:`CBRE AS  ·  Tilstandsvurdering  ·  ${e2.navn||''}  ·  BREEAM-NOR Rsc 01`,font:"Calibri",size:18,color:MG})]})]});
+    const footer=new Footer({children:[new Paragraph({border:{top:{style:BorderStyle.SINGLE,size:6,color:G,space:4}},tabStops:[{type:TabStopType.CENTER,position:TabStopPosition.MAX/2},{type:TabStopType.RIGHT,position:TabStopPosition.MAX}],spacing:{before:80,after:0},children:[new TextRun({text:"© CBRE AS  ·  Konfidensielt",font:"Calibri",size:16,color:MG}),new TextRun({text:"\t"+(op.rnr||'')+"\t",font:"Calibri",size:16,color:MG}),new TextRun({text:"Side ",font:"Calibri",size:16,color:MG}),new PageNumberElement({font:"Calibri",size:16,color:MG})]})]});
+
+    const docdoc=new Document({
+      numbering:{config:[{reference:"bullets",levels:[{level:0,format:LevelFormat.BULLET,text:"•",alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]}]},
+      styles:{default:{document:{run:{font:"Calibri",size:22,color:DK}}},paragraphStyles:[
+        {id:"Heading1",name:"Heading 1",basedOn:"Normal",next:"Normal",run:{size:34,bold:true,font:"Calibri",color:G},paragraph:{spacing:{before:480,after:120},outlineLevel:0}},
+        {id:"Heading2",name:"Heading 2",basedOn:"Normal",next:"Normal",run:{size:26,bold:true,font:"Calibri",color:G},paragraph:{spacing:{before:320,after:100},outlineLevel:1}},
+        {id:"Heading3",name:"Heading 3",basedOn:"Normal",next:"Normal",run:{size:22,bold:true,font:"Calibri",color:MG},paragraph:{spacing:{before:240,after:80},outlineLevel:2}},
+      ]},
+      sections:[{
+        properties:{page:{size:{width:11906,height:16838},margin:{top:1134,right:1134,bottom:1134,left:1134}}},
+        headers:{default:header},footers:{default:footer},
+        children:[...forside,...sek1,...sek2,...sek3,...sek4,...sek5],
+      }],
+    });
+
+    const blob=await Packer.toBlob(docdoc);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`Tilstandsvurdering_Rsc01_${(e2.navn||'rapport').replace(/\s+/g,'_')}_${op.rnr||new Date().toISOString().split('T')[0]}.docx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('✅ Rapport lastet ned!','ok');
+  } catch(err) {
+    console.error(err);
+    toast('❌ Feil: '+err.message);
+  } finally { btn.style.opacity='1'; spin.style.display='none'; }
+}
+
+// ═══ PERSISTENCE (IndexedDB) ══════════════════════════════
+let saveTimer = null;
+function saveState() { clearTimeout(saveTimer); saveTimer = setTimeout(persistState, 600); }
+async function persistState() { try { await dbPut('state', JSON.stringify(state)); } catch(e) { console.warn('Save failed:', e); } }
+async function saveNow() { await persistState(); toast('💾 Lagret','ok'); }
+
+async function loadState() {
+  try {
+    const raw = await dbGet('state');
+    if (raw) { state = JSON.parse(raw); fillFields(); renderPartsList(); }
+  } catch(e) { console.warn('Load failed:', e); }
+}
+
+function renderAll() { renderPartsList(); }
+
+function confirmClear() {
+  if (!confirm('Slette all data og starte på nytt?')) return;
+  state = { eiendom:{}, oppdrag:{}, sammendrag:{}, breeam:{q1:3,q2:2}, deler:[], handlingsplan:[], utbedrede:[] };
+  persistState(); fillFields(); renderAll(); toast('Tilbakestilt');
+}
+
+// ═══ TOAST ════════════════════════════════════════════════
+function toast(msg, type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  setTimeout(()=>t.className='toast',2600);
+}
+
+// Close modal on backdrop tap
+document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) closeModal(); });
+</script>
+</body>
+</html>
