@@ -23769,7 +23769,7 @@ function goTab(n) {
 // ═══ FIELDS ═══════════════════════════════════════════════
 function autosave() {
   state.eiendom = { navn:v('e_navn'), adresse:v('e_adresse'), kommune:v('e_kommune'), byggeaar:v('e_aar'), bra:v('e_bra'), etasjer:v('e_etasjer'), type:v('e_type') };
-  state.oppdrag = { giver:v('o_giver'), forvalter:v('o_forvalter'), rnr:v('o_rnr'), dato:fmtDate(v('o_dato')), rapportdato:fmtDate(new Date().toISOString().split('T')[0]), av:v('o_av'), stilling:v('o_stilling') };
+  state.oppdrag = { giver:v('o_giver'), forvalter:v('o_forvalter'), rnr:v('o_rnr'), dato:fmtDate(v('o_dato')), _datoISO:v('o_dato'), rapportdato:fmtDate(new Date().toISOString().split('T')[0]), av:v('o_av'), stilling:v('o_stilling') };
   state.sammendrag = { inn:v('s_inn'), konkl:v('s_konkl') };
   saveState(); updateProgress();
 }
@@ -23790,6 +23790,8 @@ function fillFields() {
   sv('e_type',state.eiendom.type);
   sv('o_giver',state.oppdrag.giver); sv('o_forvalter',state.oppdrag.forvalter);
   sv('o_rnr',state.oppdrag.rnr); sv('o_av',state.oppdrag.av); sv('o_stilling',state.oppdrag.stilling);
+  // Restore date field (ISO format for <input type=date>)
+  if (state.oppdrag._datoISO) sv('o_dato', state.oppdrag._datoISO);
   sv('s_inn',state.sammendrag.inn); sv('s_konkl',state.sammendrag.konkl);
   if (state.breeam) { hiQ('q1',state.breeam.q1); hiQ('q2',state.breeam.q2); }
 }
@@ -23979,11 +23981,13 @@ function savePart() {
   else state.deler.push(part);
   saveState(); renderPartsList(); closeModal();
   toast('✅ Lagret','ok'); updateProgress();
+  if(curTab===3) renderSummary();
 }
 
 function deletePart() {
   if (!editId||!confirm('Slette?')) return;
   state.deler = state.deler.filter(d=>d.id!==editId);
+  state.handlingsplan = (state.handlingsplan||[]).filter(h=>h.partId!==editId);
   saveState(); renderPartsList(); closeModal(); toast('Slettet');
 }
 
@@ -24019,7 +24023,7 @@ function renderPartsList() {
         <div class="part-expand">
           <div style="padding-top:10px">
             ${p.tilt?`<p style="font-size:12px;color:var(--gray-500);margin-bottom:8px"><strong>Tiltak:</strong> ${p.tilt}</p>`:''}
-            ${p.bilder?.length?`<div class="photo-grid">${p.bilder.map(b=>`<div class="photo-wrap"><img src="${b.dataUrl}" alt="${b.caption||''}"></div>`).join('')}</div>`:''}
+            ${p.bilder?.length?`<div class="photo-grid">${p.bilder.map(b=>`<div class="photo-wrap"><img src="${typeof b==='string'?b:b.dataUrl}" alt="${b.caption||''}"></div>`).join('')}</div>`:''}
             <div class="btn-row" style="margin-top:10px">
               <button class="btn btn-ghost btn-sm" onclick="openEditPart('${p.id}')">✏️ Rediger</button>
             </div>
@@ -24062,13 +24066,21 @@ function loadTemplate() {
 
 // ═══ ACTIONS ══════════════════════════════════════════════
 function renderActions() {
-  // Auto-generate from deler
-  const existIds = new Set((state.handlingsplan||[]).map(h=>h.partId));
+  // Sync handlingsplan with current deler state
+  state.handlingsplan = state.handlingsplan || [];
+  // Remove entries for deleted parts or parts no longer TG 1-3
+  const tgParts = new Set(state.deler.filter(d=>['TG 1','TG 2','TG 3'].includes(d.tg)).map(d=>d.id));
+  state.handlingsplan = state.handlingsplan.filter(h=>!h.partId||tgParts.has(h.partId));
+  // Add missing entries
+  const existIds = new Set(state.handlingsplan.map(h=>h.partId));
   state.deler.filter(d=>['TG 1','TG 2','TG 3'].includes(d.tg)&&!existIds.has(d.id)).forEach(d=>{
-    (state.handlingsplan=state.handlingsplan||[]).push({ id:'hp-'+d.id, partId:d.id, mangel:`${d.kode?d.kode+' – ':''}${d.navn} (${d.tg})`, tilt:d.tilt||'', tg:d.tg, frist:'', ansv:'' });
+    state.handlingsplan.push({ id:'hp-'+d.id, partId:d.id, mangel:`${d.kode?d.kode+' – ':''}${d.navn} (${d.tg})`, tilt:d.tilt||'', tg:d.tg, frist:'', ansv:'' });
   });
-  const pids = new Set(state.deler.map(d=>d.id));
-  state.handlingsplan = (state.handlingsplan||[]).filter(h=>!h.partId||pids.has(h.partId));
+  // Update mangel text if part was renamed or TG changed
+  state.handlingsplan.forEach(h=>{
+    const part = state.deler.find(d=>d.id===h.partId);
+    if(part) { h.mangel=`${part.kode?part.kode+' – ':''}${part.navn} (${part.tg})`; h.tg=part.tg; }
+  });
   saveState();
 
   const el = document.getElementById('actionList');
@@ -24200,7 +24212,7 @@ async function genRapport() {
     await loadDocx();
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
             Header, Footer, AlignmentType, HeadingLevel, BorderStyle, WidthType,
-            ShadingType, VerticalAlign, PageNumberElement, LevelFormat,
+            ShadingType, VerticalAlign, SimpleField, LevelFormat,
             TabStopType, TabStopPosition, PageBreak, ImageRun } = docx;
 
     const G="003F2D",GL="17E88F",MG="4D4D4D",LG="F5F5F5",W="FFFFFF",R="D32F2F",A="FFC107",DK="1A1A1A";
@@ -24233,18 +24245,20 @@ async function genRapport() {
       const runs=[];
       for(const b of(bilder||[])){
         try{
-          const[meta,b64]=b.dataUrl.split(',');
+          const dataUrl = typeof b==='string' ? b : b.dataUrl;
+          const[meta,b64]=dataUrl.split(',');
           const type=meta.includes('jpeg')||meta.includes('jpg')?'jpg':'png';
           const bin=atob(b64); const arr=new Uint8Array(bin.length);
           for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
           runs.push(new ImageRun({data:arr.buffer,transformation:{width:160,height:120},type}));
-          if(b.caption) runs.push(new TextRun({text:'  '+b.caption+'  ',font:"Calibri",size:16,color:MG,italics:true}));
+          if(b.caption||b.caption) runs.push(new TextRun({text:'  '+(b.caption||'')+'  ',font:"Calibri",size:16,color:MG,italics:true}));
         }catch(e){}
       }
       return runs;
     }
 
-    const e2=state.eiendom,op=state.oppdrag,q1=state.breeam?.q1||0,q2=state.breeam?.q2||0;
+    const e2=state.eiendom||{},op=state.oppdrag||{},q1=state.breeam?.q1||0,q2=state.breeam?.q2||0;
+    const sam=state.sammendrag||{};
     const q1t=["Ingen tilstandsvurdering","Utarbeidet av forvalter","Forvalter iht. NS 3424:2012","Uavhengig tredjepart iht. NS 3424:2012"][q1]||"—";
     const q2t=["Ingen utbedring, ingen handlingsplan","Handlingsplan foreligger","Alle større mangler (TG 2+3) utbedret","Alle større utbedret + handlingsplan","Alle større og mindre mangler utbedret"][q2]||"—";
 
@@ -24281,7 +24295,7 @@ async function genRapport() {
         new TableRow({children:[c("Rapportnummer",3000,{bold:true,bg:LG}),c(op.rnr,6026)]}),
         new TableRow({children:[c("Utarbeidet av",3000,{bold:true,bg:LG}),c((op.av||'')+(op.stilling?', '+op.stilling:'')+', CBRE AS',6026)]}),
       ]}),
-      el(),h("Sammendrag",2),p(state.sammendrag?.inn||''),el(),p(state.sammendrag?.konkl||''),
+      el(),h("Sammendrag",2),p(sam.inn||''),el(),p(sam.konkl||''),
       el(),h("BREEAM-NOR Rsc 01 – Poengvurdering",2),
       new Table({width:{size:9026,type:WidthType.DXA},columnWidths:[600,5426,1000,2000],rows:[
         new TableRow({children:[hc("P",600),hc("Svar",5426),hc("Poeng",1000),hc("Ref.",2000)]}),
@@ -24382,7 +24396,7 @@ async function genRapport() {
 
     // Header/Footer
     const header=new Header({children:[new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:6,color:G,space:4}},spacing:{before:0,after:80},children:[new TextRun({text:`CBRE AS  ·  Tilstandsvurdering  ·  ${e2.navn||''}  ·  BREEAM-NOR Rsc 01`,font:"Calibri",size:18,color:MG})]})]});
-    const footer=new Footer({children:[new Paragraph({border:{top:{style:BorderStyle.SINGLE,size:6,color:G,space:4}},tabStops:[{type:TabStopType.CENTER,position:TabStopPosition.MAX/2},{type:TabStopType.RIGHT,position:TabStopPosition.MAX}],spacing:{before:80,after:0},children:[new TextRun({text:"© CBRE AS  ·  Konfidensielt",font:"Calibri",size:16,color:MG}),new TextRun({text:"\t"+(op.rnr||'')+"\t",font:"Calibri",size:16,color:MG}),new TextRun({text:"Side ",font:"Calibri",size:16,color:MG}),new PageNumberElement({font:"Calibri",size:16,color:MG})]})]});
+    const footer=new Footer({children:[new Paragraph({border:{top:{style:BorderStyle.SINGLE,size:6,color:G,space:4}},tabStops:[{type:TabStopType.CENTER,position:TabStopPosition.MAX/2},{type:TabStopType.RIGHT,position:TabStopPosition.MAX}],spacing:{before:80,after:0},children:[new TextRun({text:"© CBRE AS  ·  Konfidensielt",font:"Calibri",size:16,color:MG}),new TextRun({text:"\t"+(op.rnr||'')+"\t",font:"Calibri",size:16,color:MG}),new TextRun({text:"Side ",font:"Calibri",size:16,color:MG}),new SimpleField({instruction:"PAGE"})]})]});
 
     const docdoc=new Document({
       numbering:{config:[{reference:"bullets",levels:[{level:0,format:LevelFormat.BULLET,text:"•",alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}]}]},
@@ -24430,7 +24444,9 @@ function renderAll() { renderPartsList(); }
 function confirmClear() {
   if (!confirm('Slette all data og starte på nytt?')) return;
   state = { eiendom:{}, oppdrag:{}, sammendrag:{}, breeam:{q1:3,q2:2}, deler:[], handlingsplan:[], utbedrede:[] };
-  persistState(); fillFields(); renderAll(); toast('Tilbakestilt');
+  persistState(); fillFields(); renderAll();
+  hiQ('q1',3); hiQ('q2',2);
+  toast('Tilbakestilt');
 }
 
 // ═══ TOAST ════════════════════════════════════════════════
@@ -24442,6 +24458,8 @@ function toast(msg, type='') {
 
 // Close modal on backdrop tap
 document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) closeModal(); });
+// Also close if tapping the overlay itself
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
 </script>
 </body>
 </html>
